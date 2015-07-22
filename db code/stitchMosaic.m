@@ -10,7 +10,8 @@ down = dims(1);
 across = dims(2);
 
 tileSize = size(ims{1});
-progressbar('Aligning Images:','');
+progressbar('Aligning SEM and IRIS images:',[]);
+
 for r = 1:down
 	
 	% stitch together the entire row

@@ -83,7 +83,7 @@ end
 
 % Rescale the SEM results
 % shrink to the 50x scale and rotate -146 degrees
-categories = {'isolated', 'clusters', 'aggregates'};
+categories = {'isolated', 'aggregates', 'large'};
 theta = 146;
 imDim = size(imDown);
 for n = 1:3

@@ -3,7 +3,7 @@ function results = detectRodSEM(image, threshold)
 % Individual rods are distinguished from clusters.
 % Orientations are measured as well
 % It also returns the locations and sizes of any large features (i.e. crystals)
-
+% 
 % You don't need to provide a threshold for the rods, but you can if you want.
 % switch nargin
 % case 0
@@ -11,6 +11,8 @@ function results = detectRodSEM(image, threshold)
 % case 1
 % 	threshold = graythresh(image);
 % end
+% 
+% TODO - fix the bug where some edges look like a bunch of particles. better discrimination of large non-particle things by identifying large problem-regions, for example.
 
 % get raw location data
 bw = zeros(size(image));
@@ -28,17 +30,12 @@ maxCluster = 250; % 10x the nominal average. Anything bigger than this is avoide
 
 % Identify isolated particles (singletons)
 sizes = cat(1,regions.Area);
-hist(sizes, 5000); axis([0 150 0 100])
 
-isolated = regions(sizes>minSingle & sizes<maxSingle)
+results.isolates = regions(sizes>minSingle & sizes<maxSingle);
 
-% Identify clusters and larger features
-clusters = regions(sizes>maxSingle & sizes<maxCluster)
+% Identify clusters/aggregates and larger features
+results.aggregates = regions(sizes>maxSingle & sizes<maxCluster);
 
-% Identify large features (crystals, nanorod aggregates)
-aggregates = regions(sizes>maxCluster)
-
-results.isolated = isolated;
-results.clusters = clusters;
-results.aggregates = aggregates;
+% Identify any large, bright features (crystals, dust, etc)
+results.large = regions(sizes>maxCluster);
 end
