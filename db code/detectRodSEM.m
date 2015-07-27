@@ -12,9 +12,9 @@ function results = detectRodSEM(image, threshold)
 % 	threshold = graythresh(image);
 % end
 % 
-% TODO - fix the bug where some edges look like a bunch of particles. better discrimination of large non-particle things by identifying large problem-regions, for example.
+% TODO - fix the bug where some edges look like a bunch of particles. Better discrimination of large non-particle things by identifying large problem-regions, for example.
 
-% get raw location data
+% Use a binary mask to make iris images
 bw = zeros(size(image));
 bw(image>=threshold) = 1;
 bw = logical(bw);

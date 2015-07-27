@@ -1,7 +1,8 @@
-function imOut = stitchMosaic(ims, dims)
+function [imOut,excluded] = stitchMosaic(ims, dims)
 % Method 2 - stitch images left-to-right
-% combine stitched layers by figuring out the overlap distance and slapping that on
-% 
+% horizontal rows are stitched together with phase correlation.
+% Rows are combined into the final image naively (using the same overlap amount, no alignment)
+% excluded is a logical mask the same size as imOut, indicating all regions that are not covered.
 
 % A sliver is arbitrarily chosen to be 300 pixels
 sliverW = 300;
@@ -93,6 +94,8 @@ for r = 1:down
 		end		
 	end
 	progressbar(r/down, []);
-	
+
+	excluded = zeros(size(imOut));
+	excluded(imOut==0) = 1;
 	imOut(imOut==0) = median(imOut(:));
 end

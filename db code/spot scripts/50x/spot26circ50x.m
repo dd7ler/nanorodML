@@ -1,4 +1,4 @@
-% Spot 26 database entry info
+% Spot 26 circular polarization 50x database entry
 
 % IRISdata ================================================
 % metadata
@@ -21,7 +21,7 @@ IRISdata.detectionParams = struct(...
 	'contrastTh', 1.05,...
 	'polarization', true);
 
-% get IRIS images
+% Load in IRIS images
 irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/50x/c4_2/c4_2_MMStack.ome.tif';
 irisStackInfo = imfinfo(irisFname);
 IRISdata.rawImages = zeros(irisStackInfo(1).Height, irisStackInfo(1).Width);
@@ -47,7 +47,8 @@ for n = 1:length(fList)
 
 	ims{n} = I;
 end
-compositeIm = stitchMosaic(ims, mosaicDim);
+[compositeIm,excluded] = stitchMosaic(ims, mosaicDim);
+SEMdata.excluded = excluded;
 SEMdata.mosaic = compositeIm;
 
 
@@ -65,3 +66,24 @@ for n = 1:length(categories)
 	newCentroids = cat(1,results.features.(categories{n}).Centroid);
 	plot(newCentroids(:,1), newCentroids(:,2), ['o' color(n)]);
 end
+
+rep = input('Does it look ok? [y]/n ', 's');
+if isempty(rep)
+	rep = 'y';
+end
+if rep ~= 'y'
+	return;
+end
+
+% Check and save =========================================
+
+% Run through the check function
+ok = dbCheckFn(results);
+if ~ok
+	error('Not all fields present!');
+	return;
+end
+
+% save if no errors
+save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
+

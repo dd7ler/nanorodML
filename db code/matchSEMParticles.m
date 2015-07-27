@@ -29,6 +29,7 @@ function results = matchSEMParticles(IRISdata, SEMdata)
 % features 	: a structure that contains all feature coordinates. 
 % 				It has fields 'isolates', 'aggregates', and 'large'.
 % 				Each of these fields is itself a structure array, with fields 'Centroid' , 'Area', 'Orientation', and 'Eccentricity'.
+% excluded	: a binary mask the size of one image, indicating regions where there was no SEM coverage.
 
 % ================================================================================================
 % Check for and save IRIS image metadata for our output.
@@ -36,13 +37,17 @@ function results = matchSEMParticles(IRISdata, SEMdata)
 
 results = struct;
 results.metadata = struct;
-requiredFields = { 'type', 'oxideT', 'wavelength', 'nanorods', 'immersion', 'detectionParams'};
+requiredFields = { 'type', 'oxideT', 'wavelength', 'nanorods', 'immersion', 'detectionParams', 'mag'};
 for n = 1:length(requiredFields)
 	if ~isfield(IRISdata,requiredFields{n})
 		error(['matchSEMParticles requires that IRISdata has field "' requiredFields{n} '"']);
 	end
 	results.metadata.(requiredFields{n}) = IRISdata.(requiredFields{n});
 end
+if ~isfield(SEMdata,'excluded')
+	error('matchSEMParticles requires that SEMdata has field "excluded"');
+end
+results.excluded = SEMdata.excluded;
 
 % Crop the IRIS image to the correct size
 h = figure;
