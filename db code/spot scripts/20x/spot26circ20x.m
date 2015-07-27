@@ -46,6 +46,23 @@ for n = 1:length(requiredFields)
 end
 results.metadata = IRISdata;
 
+figure;
+imshow(results.images(:,:,floor(length(irisStackInfo)/2)).*~results.excluded,[]);
+hold on;
+color = 'rgb';
+categories = {'isolates', 'aggregates', 'large'};
+for n = 1:length(categories)
+	newCentroids = cat(1,results.features.(categories{n}).Centroid);
+	plot(newCentroids(:,1), newCentroids(:,2), ['o' color(n)]);
+end
+
+rep = input('Does it look ok? [y]/n ', 's');
+if isempty(rep)
+	rep = 'y';
+end
+if rep ~= 'y'
+	return;
+end
 
 % Check and save =========================================
 
@@ -57,7 +74,6 @@ if ~ok
 end
 
 % save if no errors
-save('/Users/derin/nanorodML/database/spot26circ20x.mat', 'results');
+save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
 
-
-
+disp('Finished saving!');

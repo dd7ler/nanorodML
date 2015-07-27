@@ -47,7 +47,6 @@ end
 if ~isfield(SEMdata,'excluded')
 	error('matchSEMParticles requires that SEMdata has field "excluded"');
 end
-results.excluded = SEMdata.excluded;
 
 % Crop the IRIS image to the correct size
 h = figure;
@@ -144,5 +143,50 @@ for n = 1:length(categories)
 		results.features.(categories{n})(m).Centroid = finalXY';
 	end
 end
+
+disp('Particles aligned');
+% ================================================================================================
+% Transform the excluded region by the same transform as the particles
+
+% Dilate first so no excluded regions are missed, because we use 'nearest' when resizing
+ex0 = imdilate(SEMdata.excluded, strel('disk', ceil(SEMdata.magScaledown))); % 2x scaledown radius dilation, nyquist limit I think
+
+% scale down
+incl0 = imresize(~SEMdata.excluded, 1/SEMdata.magScaledown, 'nearest');
+
+% rotate by the rough offset angle
+incl1 = imrotate(incl0, SEMdata.theta, 'crop'); % this rotates about the center of the image, just like rotateCtrlPt
+ex1 = ~incl1;
+
+% translate the same amount as the control points
+rcTranslate = fliplr([v-T]');
+ex2 = imtranslate(ex1, rcTranslate,1,'linear',false); % pad with 1, because 1 means 'not imaged');
+
+% Alignment rotation about origin
+ex3 = rotateAround(ex2, 0,0, rotAngle);
+% reshape to the correct size
+size1 = size(ex3);
+size2 = size(irisIm);
+% y-direction
+if size1(1)>size2(1)
+	% The first image is too big
+	ex3 = ex3(1:size2(1),:);
+else
+	ex3 = [ex3; ones(size2(1)-size1(1), size1(2))]; % make ex3 bigger (rows)
+end
+% x-direction
+if size1(2)>size2(2)
+	% The first image is too big
+	ex3 = ex3(:,1:size2(2));
+else
+	ex3 = [ex3 ones(size1(1), size2(2)-size1(2))]; % make ex3 bigger (cols)
+end
+
+% dilate once more to to be safe
+ex4 = imdilate(ex3, strel('disk', 3)); % roughly 1 psf width
+
+% figure; imshow(double(irisIm).*~ex4,[]);
+
+results.excluded = ex4;
 
 end

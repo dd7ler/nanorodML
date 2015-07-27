@@ -58,7 +58,7 @@ results = matchSEMParticles(IRISdata, SEMdata);
 % Show results ===========================================
 
 figure;
-imshow(results.images(:,:,floor(length(irisStackInfo)/2)),[]);
+imshow(results.images(:,:,floor(length(irisStackInfo)/2)).*~results.excluded,[]);
 hold on;
 color = 'rgb';
 categories = {'isolates', 'aggregates', 'large'};
@@ -87,3 +87,4 @@ end
 % save if no errors
 save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
 
+disp('Finished saving!');
