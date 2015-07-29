@@ -31,7 +31,7 @@ end
 
 
 % SEMdata ================================================
-mosaicDim = [5 4]; % 5 down, 4 across
+mosaicDim = [6 4]; % 5 down, 4 across
 
 % SEMdata.excluded = NOT IMPLEMENTED YET :P
 SEMdata.magScaledown = 14.2;
@@ -86,6 +86,6 @@ if ~ok
 end
 
 % save if no errors
-save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
+save('/Users/derin/nanorodML/database/spot33circ50x.mat', 'results');
 
 disp('Finished saving!');

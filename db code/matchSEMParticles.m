@@ -84,10 +84,8 @@ irisParticles = XY{1};
 disp('IRIS particles detected');
 % ================================================================================================
 % Detect the particles in the SEM image
-m = mean(SEMdata.mosaic(:));
-s = std(SEMdata.mosaic(:));
-thresh = m+4*s; % four standard deviations above background
-SEMResults = detectRodSEM(SEMdata.mosaic, thresh);
+
+SEMResults = detectRodSEM(SEMdata.mosaic);
 
 % Unpack all the SEM particles into a single list (useful for matching)
 semPList = [];
