@@ -11,12 +11,12 @@ down = dims(1);
 across = dims(2);
 
 tileSize = size(ims{1});
-progressbar('Aligning SEM and IRIS images:',[]);
+progressbar('Assembling SEM Mosaic:',[]);
 
 for r = 1:down
 	
 	% stitch together the entire row
-	thisRow = ims{(r-1)*across+1};
+	thisRow = ims{(r-1)*across+1}; % if you are here because of an error, you probably didn't provide the correct 'dims'
 	sliverStartY = 1;
 	for c = 1:(across-1)
 		% Match the rightmost sliver of the first with the leftmost sliver of the next
@@ -30,7 +30,12 @@ for r = 1:down
 
 		% vector difference between the slivers
 		[delta, q] = phCorrAlign(leftSliver, rightSliver);
-		% 	TODO - have a check so if the alignment is way off, it is reset.
+
+		% 	If the alignment is way off, it is reset.
+		defaultDelta = [-15, -100];
+		if sum(sqrt((delta-defaultDelta).^2))>200
+			delta = defaultDelta;
+		end
 		
 		% vector difference between the full images
 		deltaIm = delta + [sliverStartY-1 size(im1,2)-sliverW];
@@ -76,7 +81,7 @@ for r = 1:down
 		% Center the new row below the old one
 		compositeW = size(imOut,2);
 
-		if totalW>=compositeW
+		if totalW>compositeW
 			% We need to stretch the composite to fit the output
 			offset = floor((totalW-compositeW)/2);
 			
@@ -94,8 +99,8 @@ for r = 1:down
 		end		
 	end
 	progressbar(r/down, []);
-
-	excluded = zeros(size(imOut));
-	excluded(imOut==0) = 1;
-	imOut(imOut==0) = median(imOut(:));
+	
+end
+excluded = (imOut==0);
+imOut(imOut==0) = median(imOut(:));
 end

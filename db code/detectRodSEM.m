@@ -22,8 +22,8 @@ I3 = I2>(m+3*s) | I2<(m-3*s);
 I4 = imclose(I3, strel('disk',50));
 
 % dilation - cast a larger shadow, to be conservative.
-results.largeMask = imdilate(I4, strel('disk', 50));
-% figure; imshow(largeMask);
+results.largeMask = imdilate(I4, strel('disk', 250));
+% figure; imshow(results.largeMask);
 
 % Enumerate these large features
 results.large = regionprops(results.largeMask, 'Centroid', 'Area', 'Eccentricity', 'Orientation');
@@ -35,8 +35,8 @@ results.large = regionprops(results.largeMask, 'Centroid', 'Area', 'Eccentricity
 I2 = imtophat(image, strel('disk', 5));
 % figure; imshow(I2,[])
 % Binarize - rods are much brighter than the background
-m = mean(I2(:))
-s = std(I2(:))
+m = mean(I2(:));
+s = std(I2(:));
 I3 = (I2>=m+10*s);
 % figure; imshow(I3,[]);
 

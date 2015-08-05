@@ -9,13 +9,14 @@ function results = matchHiMagParticles(irisData, hiMagData)
 h = figure;
 stackSize = size(irisData.rawImages,3);
 if stackSize ==1
-	[irisIm, cropRect] = imcrop(irisData.rawImages);
+	[irisIm, cropRect] = imcrop(irisData.rawImages, median(irisData.rawImages(:))*[.6 1.4]);
 	results.images = irisIm;
 	hiMag = hiMagData.images;
 else
 	% the middle image in the stack
-	[irisIm, cropRect] = imcrop(irisData.rawImages(:,:,floor(stackSize/2)),[]);
-	hiMag = hiMagData.images(:,:,floor(stackSize/2)); % 
+	myIm = irisData.rawImages(:,:,floor(stackSize/2));
+	[irisIm, cropRect] = imcrop(myIm,median(myIm(:))*[.6 1.4]);
+	hiMag = hiMagData.images(:,:,8); % 
 	% crop and save the stack
 	for n= 1:size(irisData.rawImages,3)
 		results.images(:,:,n) = imcrop(irisData.rawImages(:,:,n),cropRect);
@@ -51,6 +52,23 @@ if size1(2)>size2(2)
 else
 	irisAlign = irisAlign(:,1:size1(2));
 end
+
+
+% % This is in case they have different salt patterns. Remove otherwise.
+% m = median(hiIm(:));
+% s = std(hiIm(:));
+% maskR = hiIm<m-3*s;%hiIm>m+3*s | hiIm<m-3*s;
+% maskR = imdilate(maskR, strel('disk', 4));
+% hiIm(maskR) = m;
+
+% m = median(irisAlign(:));
+% s = std(irisAlign(:));
+% maskR = irisAlign<m-2*s;%irisAlign>m+2*s | irisAlign<m-2*s;
+% maskR = imdilate(maskR, strel('disk', 4));
+% irisAlign(maskR) = m;
+
+figure; imshow(hiIm,median(hiIm(:)).*[.6 1.4]); axis on;
+figure; imshow(irisIm,median(irisAlign(:)).*[.6 1.4]); axis on;
 
 [delta, q] = phCorrAlign(hiIm, irisAlign);
 % Check the alignment

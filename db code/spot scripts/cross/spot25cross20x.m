@@ -1,16 +1,16 @@
-% Spot 26 circular polarization 20x database entry
+% Spot 25 cross polarization 20x database entry
 
-% IRISdata ================================================
+% crossData ================================================
 % metadata
-IRISdata.type = 'circular';
-IRISdata.oxideT = '30';
-IRISdata.wavelength = '660';
-IRISdata.nanorods = '25x60nm gold';
-IRISdata.immersion = 'air';
-IRISdata.mag = 20;
-IRISdata.zStackStepMicrons = 1;
-IRISdata.angle = 146;
-IRISdata.detectionParams = struct(...
+crossData.type = 'cross';
+crossData.oxideT = '30';
+crossData.wavelength = '660';
+crossData.nanorods = '25x60nm gold';
+crossData.immersion = 'air';
+crossData.mag = 20;
+crossData.angles = -5:1:5;
+crossData.angle = 146;
+crossData.detectionParams = struct(...
 	'IntensityThresh', 0.6, ...
 	'EdgeTh', 2,...
 	'gaussianTh', -1,...
@@ -21,33 +21,34 @@ IRISdata.detectionParams = struct(...
 	'contrastTh', 1.05,...
 	'polarization', true);
 
+
 % Load in IRIS images
-irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/20x/c34_1/c34_1_MMStack.ome.tif';
-irisStackInfo = imfinfo(irisFname);
-IRISdata.rawImages = zeros(irisStackInfo(1).Height, irisStackInfo(1).Width);
-for n = 1:length(irisStackInfo)
-	IRISdata.rawImages(:,:,n) = imread(irisFname,n);
-end
+irisFname = '/Users/derin/nanorodML/imageData/cross/20x/PolStack_c3c4_133034.mat';
+irisd = load(irisFname);
+crossData.rawImages = double(irisd.image_data.image_cube);
+
 
 % Get the feature info from corresponding 50x image database entry ============
 
 % Load 50x
-temp = load('/Users/derin/nanorodML/database/spot26circ50x.mat');
+temp = load('/Users/derin/nanorodML/database/cross/spot25cross50x.mat');
 fiftyx = temp.results;
 fiftyx.metadata.mag = 50; % backwards compatibility hack for testing
 
-results = matchHiMagParticles(IRISdata, fiftyx);
+results = matchHiMagParticles(crossData, fiftyx);
 
 % Add in the metadata
 results.metadata = struct;
 requiredFields = { 'type', 'oxideT', 'wavelength', 'nanorods', 'immersion', 'detectionParams'};
 for n = 1:length(requiredFields)
-	results.metadata.(requiredFields{n}) = IRISdata.(requiredFields{n});
+	results.metadata.(requiredFields{n}) = crossData.(requiredFields{n});
 end
-results.metadata = IRISdata;
+results.metadata = crossData;
 
 figure;
-imshow(results.images(:,:,floor(length(irisStackInfo)/2)).*~results.excluded,[]);
+myIm = results.images(:,:,floor(size(results.images,3)/2));
+myIm = double(myIm);
+imshow(myIm.*~results.excluded,median(myIm(:))*[0.8 1.2]);
 hold on;
 color = 'rgb';
 categories = {'isolates', 'aggregates', 'large'};
@@ -56,13 +57,15 @@ for n = 1:length(categories)
 	plot(newCentroids(:,1), newCentroids(:,2), ['o' color(n)]);
 end
 
-rep = input('Does it look ok? [y]/n ', 's');
+rep = input('Does it look ok? [y]/n:', 's');
 if isempty(rep)
 	rep = 'y';
 end
 if rep ~= 'y'
 	return;
 end
+close all;
+
 
 % Check and save =========================================
 
@@ -74,6 +77,6 @@ if ~ok
 end
 
 % save if no errors
-save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
+save('/Users/derin/nanorodML/database/cross/spot25cross20x.mat', 'results');
 
 disp('Finished saving!');

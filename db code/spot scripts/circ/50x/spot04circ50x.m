@@ -11,9 +11,9 @@ IRISdata.mag = 50;
 IRISdata.zStackStepMicrons = 1;
 IRISdata.angle = 146;
 IRISdata.detectionParams = struct(...
-	'IntensityThresh', 0.6, ...
+	'IntensityThresh', 0.4, ...
 	'EdgeTh', 2,...
-	'gaussianTh', -1,...
+	'gaussianTh', 0,...
 	'template', 5,...
 	'SD', 1,...
 	'innerRadius', 9,...
@@ -22,7 +22,7 @@ IRISdata.detectionParams = struct(...
 	'polarization', true);
 
 % Load in IRIS images
-irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/50x/c4_2/c4_2_MMStack.ome.tif';
+irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/50x/c1_4/c1_4_MMStack.ome.tif';
 irisStackInfo = imfinfo(irisFname);
 IRISdata.rawImages = zeros(irisStackInfo(1).Height, irisStackInfo(1).Width);
 for n = 1:length(irisStackInfo)
@@ -31,23 +31,22 @@ end
 
 
 % SEMdata ================================================
-mosaicDim = [6 4]; % 5 down, 4 across
+mosaicDim = [4 4]; % 5 down, 4 across
 
-% SEMdata.excluded = NOT IMPLEMENTED YET :P
 SEMdata.magScaledown = 14.2;
 SEMdata.theta = 146;
 
 % get composite image
-fList = regexpdir('/Users/derin/nanorodML/imageData/sem/spot26', '^.*\.tif$');
+fList = regexpdir('/Users/derin/nanorodML/imageData/sem/spot4', '^.*\.tif$');
 ims = cell(1,length(fList));
 for n = 1:length(fList)
 	I = imread(fList{n});
 	% black out the bottom 240 pixels
-	I((end-240):end, :) = median(I(:));
+	I((end-240):end, :) = 0;
 
 	ims{n} = I;
 end
-[compositeIm,excluded] = stitchMosaic(ims, mosaicDim);
+[compositeIm,excluded] = naiveMosaic(ims, mosaicDim);
 SEMdata.excluded = excluded;
 SEMdata.mosaic = compositeIm;
 
@@ -75,7 +74,7 @@ end
 if rep ~= 'y'
 	return;
 end
-
+close all
 % Check and save =========================================
 
 % Run through the check function
@@ -86,6 +85,6 @@ if ~ok
 end
 
 % save if no errors
-save('/Users/derin/nanorodML/database/spot33circ50x.mat', 'results');
+save('/Users/derin/nanorodML/database/spot04circ50x.mat', 'results');
 
 disp('Finished saving!');

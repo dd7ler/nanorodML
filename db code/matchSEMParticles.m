@@ -34,7 +34,7 @@ function results = matchSEMParticles(IRISdata, SEMdata)
 % ================================================================================================
 % Check for and save IRIS image metadata for our output.
 % This information isn't all required for the output, but it is for the database.
-
+disp('Matching SEM to IRIS');
 results = struct;
 results.metadata = struct;
 requiredFields = { 'type', 'oxideT', 'wavelength', 'nanorods', 'immersion', 'detectionParams', 'mag'};
@@ -52,11 +52,12 @@ end
 h = figure;
 stackSize = size(IRISdata.rawImages,3);
 if stackSize ==1
-	[irisIm, cropRect] = imcrop(IRISdata.rawImages);
+	[irisIm, cropRect] = imcrop(IRISdata.rawImages, median(IRISdata.rawImages(:))*[.6 1.4]);
 	results.images = irisIm;
 else
 	% the middle image in the stack
-	[irisIm, cropRect] = imcrop(IRISdata.rawImages(:,:,floor(stackSize/2)),[]);
+	myIm = IRISdata.rawImages(:,:,floor(stackSize/2));
+	[irisIm, cropRect] = imcrop(myIm,median(myIm(:))*[.6 1.4]);
 	% crop and save the stack
 	for n= 1:size(IRISdata.rawImages,3)
 		results.images(:,:,n) = imcrop(IRISdata.rawImages(:,:,n),cropRect);
@@ -78,9 +79,21 @@ pause(0.01);
 disp('Initialization completed');
 % ================================================================================================
 % Detect the particles in the IRIS image
-[XY,~,~] = particleDetection(irisIm, IRISdata.detectionParams);
-irisParticles = XY{1};
+k = fspecial('gaussian',21,6);
+smot = imfilter(irisIm, k, 'replicate', 'same');
+m = mean(smot(:));
+s = std(smot(:));
+m1 = smot>(m+2*s) | smot<(m-2*s);
+m2 = imdilate(m1, strel('disk',20));
+masked = irisIm;
+masked(m2)= median(irisIm(:));
+% figure; imshow(masked,[]);
 
+[XY,~,~] = particleDetection(masked, IRISdata.detectionParams);
+irisParticles = XY{1};
+figure; imshow(irisIm,median(irisIm(:))*[0.8 1.2]); hold on;
+plot(irisParticles(:,1), irisParticles(:,2), '*r');
+pause(.02);
 disp('IRIS particles detected');
 % ================================================================================================
 % Detect the particles in the SEM image
@@ -106,39 +119,61 @@ for m = 1:length(semModel)
 	semModel(m,:) = rotateCtrlPt(semPList(m,:)/SEMdata.magScaledown,-1*SEMdata.theta,fliplr(imDim));
 end
 
-% Align the two clusters of points using iterative closest point (ICP) matching
-model = semModel';
-data = irisParticles';
+% Align the two clusters of points using Coherent Point Drift
 
-% 1 - match up the mean centroids so they start close together
-v = mean(data,2)- mean(model,2);
-modelArr = zeros(size(model));
-for x = 1:size(model,2)
-	modelArr(:,x) = model(:,x) + v;
-end
-% 2 - Do the actual alignment
-[R,T,dataOut]=icp(modelArr,data,[],[],1);
+% % 1 - match up the mean centroids so they start close together
+% v = mean(irisParticles,1)- mean(semModel,1);
+% modelArr = zeros(size(model));
+% for x = 1:size(model,2)
+% 	modelArr(x,:) = model(x,:) + v;
+% end
+
+% 2 - Do the actual alignment nonrigidly (because the SEM image tiling is not certain)
+
+opt.method='nonrigid'; % use nonrigid registration
+opt.beta=4;            % the width of Gaussian kernel (smoothness)
+opt.lambda=3;          % regularization weight
+
+opt.viz=1;              % show every iteration
+opt.outliers=.3;       % use 0.7 noise weight
+opt.fgt=0;              % do not use FGT (default)
+opt.normalize=1;        % normalize to unit variance and zero mean before registering (default)
+opt.corresp=1;          % compute correspondence vector at the end of registration (not being estimated by default)
+
+opt.max_it=500;         % max number of iterations
+opt.tol=1e-10;          % tolerance
+
+figure;
+[Transform, C]=cpd_register(irisParticles,semModel, opt);
+
+
+% do the alignment again but rigidly, to get the rotation translation and scaling factors for the exclusion mask
+
+opt.method='rigid'; % use rigid registration
+opt.viz=1;          % show every iteration
+opt.outliers=0.6;   % use 0.1 noise weight
+opt.normalize=1;    % normalize to unit variance and zero mean before registering (default)
+opt.scale=1;        % estimate global scaling too (default)
+opt.rot=1;          % estimate strictly rotational matrix (default)
+opt.corresp=1;      % compute correspondence vector at the end of registration (not being estimated by default)
+
+opt.max_it=500;     % max number of iterations
+opt.tol=1e-8;       % tolerance
+
+% do the transformation backwards, because there tends to be lots of 'extra' SEM particles (IRIS detection misses quite a few)
+[MaskTransform, MaskC]=cpd_register(semModel, irisParticles, opt);
 
 disp('SEM and IRIS particles matched');
 % ================================================================================================
-% Transform the SEM particles to the cropped IRIS reference frame, and populate 'results.features'
-
-rotAngle = -1*acos(R(1)); % reverse rotation angle
-rotMat = [cos(rotAngle) -1*sin(rotAngle) ; sin(rotAngle) cos(rotAngle)];
+% Populate 'results.features' with the transformed particles
 
 % Initialize 'results.features' with original data, swap in updated Centroids
 results.features = SEMResults;
+curIdx = 1;
 for n = 1:length(categories)
-	% get all the original centroids
-	centroids = cat(1, SEMResults.(categories{n}).Centroid);
-
-	for m = 1:length(centroids)
-		% rotate and scaledown
-		c0 = rotateCtrlPt(centroids(m,:)/SEMdata.magScaledown,-1*SEMdata.theta,fliplr(imDim));
-		% translate by means
-		temp = c0' + v - T;
-		finalXY = rotMat*temp;
-		results.features.(categories{n})(m).Centroid = finalXY';
+	for m = 1:length(cat(1, SEMResults.(categories{n}).Centroid))
+		results.features.(categories{n})(m).Centroid = Transform.Y(curIdx,:);
+		curIdx = curIdx+1;
 	end
 end
 
@@ -147,21 +182,22 @@ disp('Particles aligned');
 % Transform the excluded region by the same transform as the particles
 
 % Dilate first so no excluded regions are missed, because we use 'nearest' when resizing
-ex0 = imdilate(SEMdata.excluded, strel('disk', ceil(SEMdata.magScaledown))); % 2x scaledown radius dilation, nyquist limit I think
-
+scaleFactor = SEMdata.magScaledown/MaskTransform.s;
+ex0 = imdilate(SEMdata.excluded, strel('disk', ceil(scaleFactor/2))); % 2x scaledown radius dilation, nyquist limit I think
 % scale down
-incl0 = imresize(~SEMdata.excluded, 1/SEMdata.magScaledown, 'nearest');
+incl0 = imresize(~ex0, 1/scaleFactor, 'nearest');
 
-% rotate by the rough offset angle
+% rotate by the total offset angle
 incl1 = imrotate(incl0, SEMdata.theta, 'crop'); % this rotates about the center of the image, just like rotateCtrlPt
-ex1 = ~incl1;
+rotAngle = -1*180/pi*acos(MaskTransform.R(1)); % alignment rotation angle
+incl2 = rotateAround(incl1, 0,0, rotAngle);
+ex2 = ~incl2;
+
 
 % translate the same amount as the control points
-rcTranslate = fliplr([v-T]');
-ex2 = imtranslate(ex1, rcTranslate,1,'linear',false); % pad with 1, because 1 means 'not imaged');
+rcTranslate = -1*fliplr(MaskTransform.t');
+ex3 = imtranslate(ex2, rcTranslate,1,'linear',false); % pad with 1, because 1 means 'not imaged');
 
-% Alignment rotation about origin
-ex3 = rotateAround(ex2, 0,0, rotAngle);
 % reshape to the correct size
 size1 = size(ex3);
 size2 = size(irisIm);
@@ -175,15 +211,23 @@ end
 % x-direction
 if size1(2)>size2(2)
 	% The first image is too big
-	ex3 = ex3(:,1:size2(2));
+	ex3 = ex3(:,1:size(irisIm,2));
 else
-	ex3 = [ex3 ones(size1(1), size2(2)-size1(2))]; % make ex3 bigger (cols)
+	ex3 = [ex3 ones(size(ex3,1), size(irisIm,2)-size(ex3,2))]; % make ex3 bigger (cols)
 end
 
 % dilate once more to to be safe
 ex4 = imdilate(ex3, strel('disk', 3)); % roughly 1 psf width
 
 % figure; imshow(double(irisIm).*~ex4,[]);
+% hold on;
+% color = 'rgb';
+% categories = {'isolates', 'aggregates', 'large'};
+% for n = 1:length(categories)
+% 	newCentroids = cat(1,results.features.(categories{n}).Centroid);
+% 	plot(newCentroids(:,1), newCentroids(:,2), ['o' color(n)]);
+% end
+
 
 results.excluded = ex4;
 

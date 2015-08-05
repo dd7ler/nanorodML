@@ -4,7 +4,7 @@ function [delta,q] = phCorrAlign(I1, I2)
 % Sauce: http://www.mathworks.com/matlabcentral/newsreader/view_thread/22794
 % delta is the [row, column] displacement of I2 relative to I1.
 
-block_outer = 150;
+% block_outer = 150;
 
 % Take FFT of each image
 F1 = fft2(I1);

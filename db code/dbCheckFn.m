@@ -27,13 +27,13 @@ for n = 1:length(requiredFields)
 	end
 end
 % check type (cirular or cross) so we can check for either 'angle' or 'zStackStepMicrons'
-if dbInfo.metadata.type == 'circular'
+if strcmp(dbInfo.metadata.type,'circular')
 	if ~isfield(dbInfo.metadata,'zStackStepMicrons')
-		error('matchSEMParticles requires that dbInfo.metadata has field "zStackStepMicrons" because it is circular polarization');
+		error('matchSEMParticles requires that dbInfo.metadata has field "zStackStepMicrons" because it contains more than one circular-polarization image');
 	end
-elseif dbInfo.metadata.type == 'cross'
+elseif strcmp(dbInfo.metadata.type,'cross')
 	if ~isfield(dbInfo.metadata,'angles')
-		error('matchSEMParticles requires that dbInfo.metadata has field "angles" because it is circular polarization');
+		error('matchSEMParticles requires that dbInfo.metadata has field "angles" because it contains more than one cross-polarization image');
 	end
 end
 
@@ -44,6 +44,10 @@ end
 % check for features
 if ~isfield(dbInfo,'features')
 	error('Database requires the field "features"');
+end
+% check for excluded
+if ~isfield(dbInfo,'excluded')
+	error('Database requires the field "excluded"');
 end
 
 isOk = true;

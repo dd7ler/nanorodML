@@ -1,4 +1,4 @@
-function imOut = naiveMosaic(ims, dims)
+function [imOut, excluded] = naiveMosaic(ims, dims)
 % Shoulder-to-shoulder composition (Use if there is NO OVERLAP)
 % 
 % ims is a cell array of images that all have the same size.
@@ -24,3 +24,6 @@ for n = 1:(dims(1)*dims(2))
 	c = (startC(n)+1):(startC(n)+tileSize(2));
 	imOut(r, c) = ims{n};
 end
+
+excluded = (imOut==0);
+imOut(imOut==0) = median(imOut(:));

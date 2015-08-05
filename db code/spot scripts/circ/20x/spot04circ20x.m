@@ -1,4 +1,4 @@
-% Spot 26 circular polarization 50x database entry
+% Spot 4 circular polarization 20x database entry
 
 % IRISdata ================================================
 % metadata
@@ -7,7 +7,7 @@ IRISdata.oxideT = '30';
 IRISdata.wavelength = '660';
 IRISdata.nanorods = '25x60nm gold';
 IRISdata.immersion = 'air';
-IRISdata.mag = 50;
+IRISdata.mag = 20;
 IRISdata.zStackStepMicrons = 1;
 IRISdata.angle = 146;
 IRISdata.detectionParams = struct(...
@@ -22,44 +22,33 @@ IRISdata.detectionParams = struct(...
 	'polarization', true);
 
 % Load in IRIS images
-irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/50x/c4_2/c4_2_MMStack.ome.tif';
+irisFname = '/Users/derin/nanorodML/imageData/circular/2015-6-15 z stacks/20x/c12_2/c12_2_MMStack.ome.tif';
 irisStackInfo = imfinfo(irisFname);
 IRISdata.rawImages = zeros(irisStackInfo(1).Height, irisStackInfo(1).Width);
 for n = 1:length(irisStackInfo)
 	IRISdata.rawImages(:,:,n) = imread(irisFname,n);
 end
 
+% Get the feature info from corresponding 50x image database entry ============
 
-% SEMdata ================================================
-mosaicDim = [5 4]; % 5 down, 4 across
+% Load 50x
+temp = load('/Users/derin/nanorodML/database/spot04circ50x.mat');
+fiftyx = temp.results;
+fiftyx.metadata.mag = 50; % backwards compatibility hack for testing
 
-% SEMdata.excluded = NOT IMPLEMENTED YET :P
-SEMdata.magScaledown = 14.2;
-SEMdata.theta = 146;
+results = matchHiMagParticles(IRISdata, fiftyx);
 
-% get composite image
-fList = regexpdir('/Users/derin/nanorodML/imageData/sem/spot26', '^.*\.tif$');
-ims = cell(1,length(fList));
-for n = 1:length(fList)
-	I = imread(fList{n});
-	% black out the bottom 240 pixels
-	I((end-240):end, :) = median(I(:));
-
-	ims{n} = I;
+% Add in the metadata
+results.metadata = struct;
+requiredFields = { 'type', 'oxideT', 'wavelength', 'nanorods', 'immersion', 'detectionParams'};
+for n = 1:length(requiredFields)
+	results.metadata.(requiredFields{n}) = IRISdata.(requiredFields{n});
 end
-[compositeIm,excluded] = stitchMosaic(ims, mosaicDim);
-SEMdata.excluded = excluded;
-SEMdata.mosaic = compositeIm;
-
-
-% Get the particle position info =========================
-results = matchSEMParticles(IRISdata, SEMdata);
-
-% Show results ===========================================
+results.metadata = IRISdata;
 
 figure;
 myIm = results.images(:,:,floor(size(results.images,3)/2));
-imshow(myIm.*~results.excluded, median(myIm(:))*[0.8 1.2]);
+imshow(myIm.*~results.excluded,median(myIm(:))*[0.8 1.2]);
 hold on;
 color = 'rgb';
 categories = {'isolates', 'aggregates', 'large'};
@@ -68,7 +57,7 @@ for n = 1:length(categories)
 	plot(newCentroids(:,1), newCentroids(:,2), ['o' color(n)]);
 end
 
-rep = input('Does it look ok? [y]/n ', 's');
+rep = input('Does it look ok? [y]/n:', 's');
 if isempty(rep)
 	rep = 'y';
 end
@@ -86,6 +75,6 @@ if ~ok
 end
 
 % save if no errors
-save('/Users/derin/nanorodML/database/spot26circ50x.mat', 'results');
+save('/Users/derin/nanorodML/database/spot04circ20x.mat', 'results');
 
 disp('Finished saving!');
