@@ -19,25 +19,19 @@ function particleData = simple_NanorodDetector(images, metadata)
 % 
 % Positions should be in (x,y) coordinate format, not (r,c) format.
 
-% =========================
-% Check for required fields
-% =========================
-
-ok = dbCheckFn(results);
-
 % ===================
 % Parameter selection
 % ===================
 
 params = struct(...
-	'IntensityThresh', 0.6, ...
+	'IntensityThresh', 0.5, ...
 	'EdgeTh', 2,...
-	'gaussianTh', -1,...
+	'gaussianTh', 0,...
 	'template', 5,...
 	'SD', 1,...
 	'innerRadius', 9,...
 	'outerRadius', 12,...
-	'contrastTh', 1.05,...
+	'contrastTh', 1.04,...
 	'polarization', true);
 
 
@@ -55,10 +49,10 @@ end
 % ==================
 
 % We're only using the middle image of the stack here, regardless of everything we've ever come to know.
-im = images(:,:,ceil(size(images,3)));
-[particleXY, contrasts, correlations] = detectParticles(im, params);
+im = images(:,:,ceil(size(images,3)/2));
+[particleXY, contrasts, correlations] = particleDetection(im, params);
 
 % format the output correctly
 particleData.positions = particleXY{1};
 particleData.contrasts = contrasts{1};
-particleData.correlations = correlations{1};
+particleData.correlations = correlations;

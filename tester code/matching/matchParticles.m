@@ -8,12 +8,12 @@ function matches = matchParticles(particles,clusterBandwidth)
 % 	image k. Each row corresponds to the (r,c) coordinates
 %	of one detected particle.
 % 
-% clusterBandwidth is the spacing for clustering - default = 4
+% clusterBandwidth is the spacing for clustering - try 4
 % 
 % 'matches' is a cell array with a length equal to (length(particles)-1). 
 %	matches{n} is an a x 2 array, where 'a' matches were found between 
 % 	particles{n} and particles{n+1}. Each match is represented by the 
-% 	indices of the coordinates in particles{n} (at matchesand particles{n+1}.
+% 	indices of the coordinates in particles{n} (at matches and particles{n+1}.
 % 
 % This function uses uniqueNN (unique nearest neighbor) and 
 % 	MeanShiftCluster (clustering).
@@ -38,11 +38,26 @@ for n = 1:(length(particles)-1)
         % find neighbors which correspond to matches.
 
         vecs = p2(pairs(:,1),:)- p1(pairs(:,2),:);
-        % plot(vecs(:,1), vecs(:,2), '*b');
         [clustCent,~,clustMembsCell] = MeanShiftCluster(vecs',clusterBandwidth); % vecs input must be mdim x npoints
-        [~,matchCluster] = min(clustCent(1,:).^2 + clustCent(2,:).^2); % The match cluster is the cluster closest to (0,0) displacement vector which is the largest also
+        [~,matchCluster] = min(clustCent(1,:).^2 + clustCent(2,:).^2); % The match cluster is the cluster closest to (0,0) displacement vector
 
         m = pairs(clustMembsCell{matchCluster},:);
         matches(n) = {fliplr(m)};
+
+
+        % display clustering results (for fine-picking the cluster parameter)
+        figure; hold on;
+        clusterPts = clustMembsCell{matchCluster}
+        plot(vecs(clusterPts,1), vecs(clusterPts,2), '*r');
+
+        unclusteredPts = [];
+        for n =1:length(clustMembsCell)
+            if n~=matchCluster
+                unclusteredPts = [unclusteredPts clustMembsCell{n}];
+            end
+        end
+        plot(vecs(unclusteredPts,1), vecs(unclusteredPts,2), '*b');
+
+        legend('Matched vectors', 'Unmatched vectors');
     end
 end
